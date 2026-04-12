@@ -41,6 +41,7 @@ export default function Machinery() {
   const fetchSettings = async () => {
     try {
       const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
       const data = await res.json();
       if (data) setSettings(data);
     } catch (error) {
@@ -49,15 +50,25 @@ export default function Machinery() {
   };
 
   const fetchMachinery = async () => {
-    const res = await fetch('/api/machinery');
-    const data = await res.json();
-    setMachinery(data);
+    try {
+      const res = await fetch('/api/machinery');
+      if (!res.ok) throw new Error('Failed to fetch machinery');
+      const data = await res.json();
+      setMachinery(data);
+    } catch (error) {
+      console.error('Error fetching machinery:', error);
+    }
   };
 
   const fetchEmployees = async () => {
-    const res = await fetch('/api/employees');
-    const data = await res.json();
-    setEmployees(data);
+    try {
+      const res = await fetch('/api/employees');
+      if (!res.ok) throw new Error('Failed to fetch employees');
+      const data = await res.json();
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

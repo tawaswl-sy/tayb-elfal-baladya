@@ -14,9 +14,14 @@ export default function Tribes() {
   }, []);
 
   const fetchTribes = async () => {
-    const res = await fetch('/api/databank/tribes');
-    const data = await res.json();
-    setTribes(data);
+    try {
+      const res = await fetch('/api/databank/tribes');
+      if (!res.ok) throw new Error('Failed to fetch tribes');
+      const data = await res.json();
+      setTribes(data);
+    } catch (error) {
+      console.error('Error fetching tribes:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +68,7 @@ export default function Tribes() {
     <div className="p-8 animate-fade-in">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-[#1a3622] p-3 rounded-lg text-[#d4af37]">
+          <div className="bg-[#1a3622] p-3 rounded-xl text-[#d4af37]">
             <Users size={28} />
           </div>
           <div>
@@ -74,14 +79,14 @@ export default function Tribes() {
         <div className="flex gap-3">
           <button
             onClick={handlePrint}
-            className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors"
+            className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-colors"
           >
             <Printer size={20} />
             طباعة
           </button>
           <button
             onClick={handleExportExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+            className="bg-green-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-700 transition-colors"
           >
             <Download size={20} />
             تصدير Excel
@@ -92,7 +97,7 @@ export default function Tribes() {
               setFormData({ name: '' });
               setIsModalOpen(true);
             }}
-            className="bg-[#d4af37] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-600 transition-colors"
+            className="bg-[#d4af37] text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-yellow-600 transition-colors"
           >
             <Plus size={20} />
             إضافة عشيرة
@@ -100,14 +105,14 @@ export default function Tribes() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
         <div className="relative max-w-md mb-6">
           <input
             type="text"
             placeholder="بحث عن عشيرة..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         </div>
@@ -155,8 +160,8 @@ export default function Tribes() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="text-2xl font-bold text-[#1a3622] mb-6">
               {editingId ? 'تعديل عشيرة' : 'إضافة عشيرة جديدة'}
             </h2>
@@ -168,20 +173,20 @@ export default function Tribes() {
                   required
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                 />
               </div>
               <div className="flex gap-4 mt-8">
                 <button
                   type="submit"
-                  className="flex-1 bg-[#1a3622] text-white px-4 py-2 rounded-lg hover:bg-[#2a4a32] transition-colors"
+                  className="flex-1 bg-[#1a3622] text-white px-4 py-2 rounded-xl hover:bg-[#2a4a32] transition-colors font-bold shadow-lg"
                 >
                   حفظ
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors font-bold"
                 >
                   إلغاء
                 </button>

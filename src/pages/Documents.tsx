@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
-import { Folder, File, Upload, Trash2, Search, Download, Eye, X, Filter, Plus, Printer, FileText } from 'lucide-react';
+import { Folder, File, Upload, Trash2, Search, Download, Eye, X, Filter, Plus, Printer, FileText, CheckSquare } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
+import FileViewer from '../components/FileViewer';
+import { SYRIAN_EAGLE_LOGO } from '../lib/logo';
 
 export default function Documents() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -25,6 +27,15 @@ export default function Documents() {
   
   // Print states
   const [printDoc, setPrintDoc] = useState<any | null>(null);
+  const [taskDoc, setTaskDoc] = useState<any | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    assignedTo: '',
+    deadline: '',
+    status: 'معلقة'
+  });
   const [settings, setSettings] = useState<any>({});
   const userRole = localStorage.getItem('userRole') || 'viewer';
   
@@ -33,18 +44,38 @@ export default function Documents() {
   useEffect(() => {
     fetchDocuments();
     fetchSettings();
+    fetchEmployees();
   }, []);
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch('/api/employees');
+      if (res.ok) setEmployees(await res.json());
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   const fetchSettings = async () => {
-    const res = await fetch('/api/settings');
-    const data = await res.json();
-    setSettings(data);
+    try {
+      const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
+      const data = await res.json();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
   };
 
   const fetchDocuments = async () => {
-    const res = await fetch('/api/documents');
-    const data = await res.json();
-    setDocuments(data);
+    try {
+      const res = await fetch('/api/documents');
+      if (!res.ok) throw new Error('Failed to fetch documents');
+      const data = await res.json();
+      setDocuments(data);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -90,10 +121,17 @@ export default function Documents() {
   const handleOpenAddModal = async () => {
     const initialFolder = currentFolder || 'الصادر';
     let nextNum = '';
-    if (initialFolder === 'الصادر' || initialFolder === 'الوارد') {
-      const res = await fetch(`/api/documents/next-number?folder=${initialFolder}`);
-      const data = await res.json();
-      nextNum = data.nextNumber.toString();
+    
+    try {
+      if (initialFolder === 'الصادر' || initialFolder === 'الوارد') {
+        const res = await fetch(`/api/documents/next-number?folder=${encodeURIComponent(initialFolder)}`);
+        if (res.ok) {
+          const data = await res.json();
+          nextNum = data.nextNumber?.toString() || '';
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching next number:', error);
     }
     
     setFormData({
@@ -109,9 +147,15 @@ export default function Documents() {
   const handleFolderChange = async (folder: string) => {
     setFormData({ ...formData, folder });
     if (folder === 'الصادر' || folder === 'الوارد') {
-      const res = await fetch(`/api/documents/next-number?folder=${folder}`);
-      const data = await res.json();
-      setFormData(prev => ({ ...prev, folder, documentNumber: data.nextNumber.toString() }));
+      try {
+        const res = await fetch(`/api/documents/next-number?folder=${encodeURIComponent(folder)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setFormData(prev => ({ ...prev, folder, documentNumber: data.nextNumber?.toString() || '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching next number:', error);
+      }
     }
   };
 
@@ -147,6 +191,34 @@ export default function Documents() {
       } finally {
         setDeleteConfirmId(null);
       }
+    }
+  };
+
+  const handleConvertToTask = (doc: any) => {
+    setTaskDoc(doc);
+    setTaskFormData({
+      title: `متابعة: ${doc.name}`,
+      description: `متابعة الوثيقة رقم ${doc.documentNumber || ''} بخصوص ${doc.subject || doc.name}`,
+      assignedTo: '',
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: 'معلقة'
+    });
+  };
+
+  const submitTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskFormData)
+      });
+      if (res.ok) {
+        alert('تم تحويل الوثيقة إلى مهمة بنجاح');
+        setTaskDoc(null);
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
     }
   };
 
@@ -357,6 +429,11 @@ export default function Documents() {
                     <p className="text-xs text-gray-400 mt-1">{Math.round(doc.size / 1024)} KB</p>
                   </div>
                   <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {(userRole === 'admin' || userRole === 'diwan') && (
+                      <button onClick={() => handleConvertToTask(doc)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="تحويل لمهمة">
+                        <CheckSquare size={16} />
+                      </button>
+                    )}
                     <button onClick={() => printActualDocument(doc)} className="p-1 text-gray-600 hover:bg-gray-100 rounded" title="طباعة المستند">
                       <Printer size={16} />
                     </button>
@@ -399,19 +476,13 @@ export default function Documents() {
               </button>
             </div>
             <div className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center p-4 relative">
-              {getFileType(previewDoc.originalName || previewDoc.name) === 'image' && (
-                <img src={previewDoc.path} alt={previewDoc.name} className="max-w-full max-h-full object-contain" />
-              )}
-              {getFileType(previewDoc.originalName || previewDoc.name) === 'pdf' && (
-                <iframe src={previewDoc.path} className="w-full h-full border-0" title={previewDoc.name} />
-              )}
-              {getFileType(previewDoc.originalName || previewDoc.name) === 'text' && (
-                <iframe src={previewDoc.path} className="w-full h-full border-0 bg-white p-4 shadow-sm" title={previewDoc.name} />
-              )}
-              {['word', 'excel', 'other'].includes(getFileType(previewDoc.originalName || previewDoc.name)) && (
-                <div className="text-center flex flex-col items-center">
-                  <File size={64} className="text-gray-400 mb-4" />
-                  <p className="text-gray-600 mb-6">لا يتوفر معاينة لهذا النوع من الملفات</p>
+              <FileViewer 
+                url={previewDoc.path} 
+                type={getFileType(previewDoc.originalName || previewDoc.name)} 
+                name={previewDoc.name} 
+              />
+              {getFileType(previewDoc.originalName || previewDoc.name) === 'other' && (
+                <div className="text-center flex flex-col items-center mt-4">
                   <a href={previewDoc.path} target="_blank" rel="noreferrer" className="bg-[#1a3622] text-white px-6 py-2 rounded-lg hover:bg-green-800 transition-colors flex items-center gap-2">
                     <Download size={20} />
                     تحميل الملف
@@ -572,9 +643,7 @@ export default function Documents() {
               </style>
               
               <div className="relative min-h-[800px] border-2 border-gray-800 p-8 rounded-xl">
-                {settings?.logoPath && (
-                  <img src={settings.logoPath} alt="Watermark" className="watermark" />
-                )}
+                <img src={settings?.logoPath || SYRIAN_EAGLE_LOGO} alt="Watermark" className="watermark" />
                 
                 <div className="content-wrapper h-full flex flex-col">
                   {/* Header */}
@@ -584,13 +653,7 @@ export default function Documents() {
                       <h3 className="text-lg text-gray-800 mt-1">{settings?.headerLine2 || 'محافظة دير الزور - ناحية البصيرة'}</h3>
                       <h4 className="text-md text-gray-700 mt-1">{settings?.headerLine3 || 'مجلس بلدية طيب الفال'}</h4>
                     </div>
-                    {settings?.logoPath ? (
-                      <img src={settings.logoPath} alt="Logo" className="w-24 h-24 object-contain" />
-                    ) : (
-                      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center border-2 border-gray-300">
-                        <span className="text-gray-400 text-xs">شعار البلدية</span>
-                      </div>
-                    )}
+                    <img src={settings?.logoPath || SYRIAN_EAGLE_LOGO} alt="Logo" className="w-24 h-24 object-contain" />
                   </div>
 
                   {/* Document Details */}
@@ -682,6 +745,80 @@ export default function Documents() {
                 حذف
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Task Modal */}
+      {taskDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-300">
+            <h2 className="text-2xl font-bold text-[#1a3622] mb-6 flex items-center gap-2">
+              <CheckSquare className="text-[#d4af37]" />
+              تحويل الوثيقة لمهمة عمل
+            </h2>
+            <form onSubmit={submitTask} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">عنوان المهمة</label>
+                <input
+                  type="text"
+                  required
+                  value={taskFormData.title}
+                  onChange={e => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">الوصف</label>
+                <textarea
+                  value={taskFormData.description}
+                  onChange={e => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent h-24"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">المسؤول</label>
+                  <select
+                    required
+                    value={taskFormData.assignedTo}
+                    onChange={e => setTaskFormData({ ...taskFormData, assignedTo: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                  >
+                    <option value="">اختر المسؤول...</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.name}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">الموعد النهائي</label>
+                  <input
+                    type="date"
+                    required
+                    value={taskFormData.deadline}
+                    onChange={e => setTaskFormData({ ...taskFormData, deadline: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-8">
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#1a3622] text-white px-4 py-3 rounded-xl hover:bg-[#2a4a32] transition-all font-bold shadow-lg"
+                >
+                  إنشاء المهمة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTaskDoc(null)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-200 transition-all font-bold"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

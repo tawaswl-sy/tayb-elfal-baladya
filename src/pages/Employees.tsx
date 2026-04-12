@@ -37,6 +37,7 @@ export default function Employees() {
   const fetchSettings = async () => {
     try {
       const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
       const data = await res.json();
       if (data) setSettings(data);
     } catch (error) {
@@ -45,9 +46,14 @@ export default function Employees() {
   };
 
   const fetchEmployees = async () => {
-    const res = await fetch('/api/employees');
-    const data = await res.json();
-    setEmployees(data);
+    try {
+      const res = await fetch('/api/employees');
+      if (!res.ok) throw new Error('Failed to fetch employees');
+      const data = await res.json();
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -313,8 +319,9 @@ export default function Employees() {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const qrData = `الاسم: ${emp.name}\nالوظيفة: ${emp.jobTitle}\nالرقم الوطني: ${emp.nationalId || '-'}\nزمرة الدم: ${emp.bloodType || '-'}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrData)}&margin=0`;
+    const baseUrl = window.location.origin;
+    const qrData = encodeURIComponent(`${baseUrl}/employees/${emp.id || emp.employeeId}`);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${qrData}&margin=0`;
 
     const getDeptColor = (dept: string) => {
       switch(dept) {

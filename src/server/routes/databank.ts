@@ -249,4 +249,46 @@ router.delete('/properties/:id', (req, res) => {
   }
 });
 
+// --- Social Support ---
+router.get('/social-support', (req, res) => {
+  const db = getDb();
+  res.json(db.social_support || []);
+});
+
+router.post('/social-support', (req, res) => {
+  const db = getDb();
+  const newCase = { id: Date.now().toString(), ...req.body };
+  db.social_support.push(newCase);
+  saveDb();
+  logActivity('add_social_case', 'admin', `Added social support case: ${newCase.fullName}`);
+  res.json(newCase);
+});
+
+router.put('/social-support/:id', (req, res) => {
+  const db = getDb();
+  const index = db.social_support.findIndex((s: any) => s.id === req.params.id);
+  if (index !== -1) {
+    db.social_support[index] = { ...db.social_support[index], ...req.body };
+    saveDb();
+    logActivity('update_social_case', 'admin', `Updated social support case: ${db.social_support[index].fullName}`);
+    res.json(db.social_support[index]);
+  } else {
+    res.status(404).json({ error: 'Case not found' });
+  }
+});
+
+router.delete('/social-support/:id', (req, res) => {
+  const db = getDb();
+  const index = db.social_support.findIndex((s: any) => s.id === req.params.id);
+  if (index !== -1) {
+    const name = db.social_support[index].fullName;
+    db.social_support.splice(index, 1);
+    saveDb();
+    logActivity('delete_social_case', 'admin', `Deleted social support case: ${name}`);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Case not found' });
+  }
+});
+
 export default router;

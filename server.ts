@@ -20,6 +20,11 @@ import settingsRoutes from './src/server/routes/settings.js';
 import usersRoutes from './src/server/routes/users.js';
 import systemRoutes from './src/server/routes/system.js';
 import databankRoutes from './src/server/routes/databank.js';
+import tasksRoutes from './src/server/routes/tasks.js';
+import decisionsRoutes from './src/server/routes/decisions.js';
+import budgetRoutes from './src/server/routes/budget.js';
+import notificationsRoutes from './src/server/routes/notifications.js';
+import meetingsRoutes from './src/server/routes/meetings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +76,11 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/databank', databankRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/decisions', decisionsRoutes);
+app.use('/api/budget', budgetRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/meetings', meetingsRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -116,6 +126,40 @@ app.get('/api/dashboard', (req, res) => {
   });
   const facilitiesCount = (db.facilities || []).length;
   const propertiesCount = (db.properties || []).length;
+  const socialSupportCount = (db.social_support || []).length;
+  const socialSupportByCategory = (db.social_support || []).reduce((acc: any, s: any) => {
+    acc[s.category] = (acc[s.category] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Calculate morning report data
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yesterdayDocs = db.documents.filter((d: any) => {
+    const date = new Date(d.uploadDate || d.date);
+    return date >= yesterday && date < today;
+  });
+
+  const machineryInMaintenance = db.machinery.filter((m: any) => m.status === 'قيد الصيانة');
+  
+  // Upcoming maintenance (next 7 days)
+  const nextWeek = new Date();
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const upcomingMaintenance = db.machinery.filter((m: any) => {
+    if (!m.nextMaintenanceDate) return false;
+    const date = new Date(m.nextMaintenanceDate);
+    return date >= today && date <= nextWeek;
+  });
+
+  const overdueTasks = (db.tasks || []).filter((t: any) => {
+    if (t.status === 'منجزة') return false;
+    if (!t.deadline) return false;
+    return new Date(t.deadline) < new Date();
+  });
 
   res.json({
     employeesCount: db.employees.length,
@@ -130,14 +174,23 @@ app.get('/api/dashboard', (req, res) => {
     machineryByStatus: Object.entries(machineryByStatus).map(([name, value]) => ({ name, value })),
     projectsByStatus: Object.entries(projectsByStatus).map(([name, value]) => ({ name, value })),
     complaintsByStatus: Object.entries(complaintsByStatus).map(([name, value]) => ({ name, value })),
-    recentActivities: db.activityLog.slice(-10).reverse(), // Get last 10 activities
+    recentActivities: db.activityLog.slice(-10).reverse(), 
     databank: {
       totalPopulation,
       neighborhoodsCount,
       schoolsCount,
       studentsCount,
       facilitiesCount,
-      propertiesCount
+      propertiesCount,
+      socialSupportCount,
+      socialSupportByCategory: Object.entries(socialSupportByCategory).map(([name, value]) => ({ name, value }))
+    },
+    morningReport: {
+      yesterdayIncoming: yesterdayDocs.filter((d: any) => d.folder === 'الوارد').length,
+      yesterdayOutgoing: yesterdayDocs.filter((d: any) => d.folder === 'الصادر').length,
+      machineryInMaintenance: machineryInMaintenance.length,
+      upcomingMaintenance: upcomingMaintenance.length,
+      overdueTasks: overdueTasks.length
     }
   });
 });
@@ -166,6 +219,16 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Global error handler to ensure JSON responses for API errors
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Server Error:', err);
+    if (req.path.startsWith('/api/')) {
+      res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    } else {
+      next(err);
+    }
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);

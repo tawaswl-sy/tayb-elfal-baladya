@@ -30,6 +30,7 @@ export default function Settings() {
   const fetchSettings = async () => {
     try {
       const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
       const data = await res.json();
       setSettings(data);
       if (data.logoPath) {

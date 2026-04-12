@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import cron, { ScheduledTask } from 'node-cron';
-import { getDb, saveDb, logActivity } from '../database.js';
+import { getDb, saveDb, logActivity, initDb } from '../database.js';
 
 const router = express.Router();
 const dataDir = path.join(process.cwd(), 'data');
@@ -47,9 +47,9 @@ export const createBackupFile = async (): Promise<string> => {
       }
     });
     
-    const dbPath = path.join(dataDir, 'municipality.db.json');
+    const dbPath = path.join(dataDir, 'municipality.db');
     if (fs.existsSync(dbPath)) {
-      archive.file(dbPath, { name: 'municipality.db.json' });
+      archive.file(dbPath, { name: 'municipality.db' });
     }
     
     archive.finalize();
@@ -144,9 +144,9 @@ router.get('/create', (req, res) => {
     }
   });
   
-  const dbPath = path.join(dataDir, 'municipality.db.json');
+  const dbPath = path.join(dataDir, 'municipality.db');
   if (fs.existsSync(dbPath)) {
-    archive.file(dbPath, { name: 'municipality.db.json' });
+    archive.file(dbPath, { name: 'municipality.db' });
   }
   
   archive.finalize();
@@ -217,17 +217,8 @@ router.post('/restore', upload.single('backup'), (req, res) => {
     // Clean up temp file
     fs.unlinkSync(req.file.path);
     
-    // Reload DB
-    const dbPath = path.join(dataDir, 'municipality.db.json');
-    if (fs.existsSync(dbPath)) {
-      const data = fs.readFileSync(dbPath, 'utf8');
-      const newDb = JSON.parse(data);
-      const currentDb = getDb();
-      // Keep current users to avoid lockout
-      newDb.users = currentDb.users;
-      Object.assign(currentDb, newDb);
-      saveDb();
-    }
+    // Reload DB (In SQLite we just need to re-init or restart, but for this app we'll re-init)
+    initDb(dataDir);
     
     logActivity('restore_backup', 'admin', 'Restored system from backup');
     res.json({ success: true });

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Machinery from './pages/Machinery';
 import MachineryDetails from './pages/MachineryDetails';
+import EmployeeDetails from './pages/EmployeeDetails';
 import Documents from './pages/Documents';
 import Projects from './pages/Projects';
 import Complaints from './pages/Complaints';
@@ -16,6 +17,11 @@ import Settings from './pages/Settings';
 import Users from './pages/Users';
 import Backups from './pages/Backups';
 import Developer from './pages/Developer';
+import Tasks from './pages/Tasks';
+import Decisions from './pages/Decisions';
+import Budget from './pages/Budget';
+import Meetings from './pages/Meetings';
+import MorningReport from './pages/MorningReport';
 import DataBank from './pages/databank/DataBank';
 import Population from './pages/databank/Population';
 import Neighborhoods from './pages/databank/Neighborhoods';
@@ -23,6 +29,7 @@ import Tribes from './pages/databank/Tribes';
 import Schools from './pages/databank/Schools';
 import Facilities from './pages/databank/Facilities';
 import Properties from './pages/databank/Properties';
+import SocialSupport from './pages/databank/SocialSupport';
 import GISMap from './pages/databank/Map';
 
 function App() {
@@ -57,6 +64,11 @@ function App() {
             <MachineryDetails />
           </div>
         } />
+        <Route path="/employees/:id" element={
+          <div dir="rtl" className="min-h-screen bg-gray-50 font-sans">
+            <EmployeeDetails />
+          </div>
+        } />
 
         {/* Protected Routes */}
         <Route path="/*" element={
@@ -71,16 +83,48 @@ function App() {
             }}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/documents" element={<Documents />} />
                 <Route path="/developer" element={<Developer />} />
                 
-                {userRole === 'admin' && (
+                {/* Common Routes based on roles */}
+                {(userRole === 'admin' || userRole === 'diwan' || userRole === 'employee') && (
+                  <Route path="/tasks" element={<Tasks />} />
+                )}
+                
+                {(userRole === 'admin' || userRole === 'diwan') && (
                   <>
-                    <Route path="/employees" element={<Employees />} />
-                    <Route path="/machinery" element={<Machinery />} />
+                    <Route path="/decisions" element={<Decisions />} />
+                    <Route path="/meetings" element={<Meetings />} />
+                    <Route path="/morning-report" element={<MorningReport />} />
+                  </>
+                )}
+
+                {(userRole === 'admin' || userRole === 'accountant') && (
+                  <Route path="/budget" element={<Budget />} />
+                )}
+
+                {(userRole === 'admin' || userRole === 'accountant') && (
+                  <Route path="/employees" element={<Employees />} />
+                )}
+
+                {(userRole === 'admin' || userRole === 'employee') && (
+                  <Route path="/machinery" element={<Machinery />} />
+                )}
+
+                {(userRole === 'admin' || userRole === 'diwan' || userRole === 'accountant') && (
+                  <Route path="/documents" element={<Documents />} />
+                )}
+
+                {(userRole === 'admin' || userRole === 'employee') && (
+                  <>
                     <Route path="/projects" element={<Projects />} />
                     <Route path="/complaints" element={<Complaints />} />
                     <Route path="/licenses" element={<Licenses />} />
+                    <Route path="/databank/map" element={<GISMap />} />
+                  </>
+                )}
+
+                {userRole === 'admin' && (
+                  <>
                     <Route path="/activity" element={<Activity />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/users" element={<Users />} />
@@ -94,24 +138,7 @@ function App() {
                     <Route path="/databank/schools" element={<Schools />} />
                     <Route path="/databank/facilities" element={<Facilities />} />
                     <Route path="/databank/properties" element={<Properties />} />
-                    <Route path="/databank/map" element={<GISMap />} />
-                  </>
-                )}
-
-                {userRole === 'viewer' && (
-                  <>
-                    <Route path="/employees" element={<Employees />} />
-                    <Route path="/machinery" element={<Machinery />} />
-                    <Route path="/projects" element={<Projects />} />
-                    <Route path="/complaints" element={<Complaints />} />
-                    <Route path="/licenses" element={<Licenses />} />
-                    <Route path="/databank/map" element={<GISMap />} />
-                  </>
-                )}
-
-                {userRole === 'diwan' && (
-                  <>
-                    <Route path="/documents" element={<Documents />} />
+                    <Route path="/databank/social-support" element={<SocialSupport />} />
                   </>
                 )}
 

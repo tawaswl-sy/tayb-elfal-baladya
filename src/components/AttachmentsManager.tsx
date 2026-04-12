@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Link as LinkIcon, X, File, Image as ImageIcon, FileText } from 'lucide-react';
+import { Upload, Link as LinkIcon, X, File, Image as ImageIcon, FileText, Eye } from 'lucide-react';
+import FileViewer from './FileViewer';
 
 interface AttachmentsManagerProps {
   attachments: any[];
@@ -12,6 +13,7 @@ export default function AttachmentsManager({ attachments, setAttachments, linked
   const [allDocuments, setAllDocuments] = useState<any[]>([]);
   const [showDocSelector, setShowDocSelector] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<any | null>(null);
 
   useEffect(() => {
     fetch('/api/documents')
@@ -61,10 +63,20 @@ export default function AttachmentsManager({ attachments, setAttachments, linked
     }
   };
 
-  const getFileIcon = (filename: string) => {
+  const getFileType = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return <ImageIcon size={16} className="text-blue-500" />;
-    if (ext === 'pdf') return <FileText size={16} className="text-red-500" />;
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return 'image';
+    if (ext === 'pdf') return 'pdf';
+    if (['txt', 'csv'].includes(ext || '')) return 'text';
+    if (['doc', 'docx'].includes(ext || '')) return 'word';
+    if (['xls', 'xlsx'].includes(ext || '')) return 'excel';
+    return 'other';
+  };
+
+  const getFileIcon = (filename: string) => {
+    const type = getFileType(filename);
+    if (type === 'image') return <ImageIcon size={16} className="text-blue-500" />;
+    if (type === 'pdf') return <FileText size={16} className="text-red-500" />;
     return <File size={16} className="text-gray-500" />;
   };
 
@@ -136,17 +148,26 @@ export default function AttachmentsManager({ attachments, setAttachments, linked
                 <div key={index} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded-lg">
                   <div className="flex items-center gap-2 overflow-hidden">
                     {getFileIcon(file.name)}
-                    <a href={file.url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline truncate">
-                      {file.name}
-                    </a>
+                    <span className="text-sm text-gray-700 truncate">{file.name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(index)}
-                    className="p-1 text-red-500 hover:bg-red-50 rounded"
-                  >
-                    <X size={14} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewFile({ url: file.url, name: file.name, type: getFileType(file.name) })}
+                      className="p-1 text-green-600 hover:bg-green-50 rounded"
+                      title="معاينة"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      title="حذف"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -164,17 +185,26 @@ export default function AttachmentsManager({ attachments, setAttachments, linked
                   <div key={docId} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-2 overflow-hidden">
                       {getFileIcon(doc.name)}
-                      <a href={doc.path} target="_blank" rel="noreferrer" className="text-sm text-green-600 hover:underline truncate">
-                        {doc.name}
-                      </a>
+                      <span className="text-sm text-gray-700 truncate">{doc.name}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleLinkedDoc(docId)}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded"
-                    >
-                      <X size={14} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewFile({ url: doc.path, name: doc.name, type: getFileType(doc.originalName || doc.name) })}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded"
+                        title="معاينة"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleLinkedDoc(docId)}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        title="إزالة الربط"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -186,6 +216,27 @@ export default function AttachmentsManager({ attachments, setAttachments, linked
           <p className="text-sm text-gray-400 text-center py-4">لا توجد مرفقات أو وثائق مرتبطة</p>
         )}
       </div>
+
+      {/* Preview Modal */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-slide-up">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-bold text-lg truncate pr-8">{previewFile.name}</h3>
+              <button type="button" onClick={() => setPreviewFile(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center p-4 relative">
+              <FileViewer 
+                url={previewFile.url} 
+                type={previewFile.type} 
+                name={previewFile.name} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

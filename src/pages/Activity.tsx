@@ -12,9 +12,14 @@ export default function Activity() {
   }, []);
 
   const fetchLogs = async () => {
-    const res = await fetch('/api/activity');
-    const data = await res.json();
-    setLogs(data.reverse()); // Show newest first
+    try {
+      const res = await fetch('/api/activity');
+      if (!res.ok) throw new Error('Failed to fetch activity logs');
+      const data = await res.json();
+      setLogs(data.reverse()); // Show newest first
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+    }
   };
 
   const filteredLogs = logs.filter(log => 

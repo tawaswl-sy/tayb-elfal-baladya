@@ -3,8 +3,11 @@ import { Plus, Search, Edit2, Trash2, X, Briefcase, Calendar, CheckCircle, Clock
 import AttachmentsManager from '../components/AttachmentsManager';
 import * as XLSX from 'xlsx';
 
+import { SYRIAN_EAGLE_LOGO } from '../lib/logo';
+
 export default function Projects() {
   const [projects, setProjects] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,13 +18,23 @@ export default function Projects() {
 
   useEffect(() => {
     fetchProjects();
+    fetch('/api/settings')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch settings');
+        return res.json();
+      })
+      .then(data => setSettings(data))
+      .catch(err => console.error('Error fetching settings:', err));
   }, []);
 
   const fetchProjects = () => {
     fetch('/api/projects')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch projects');
+        return res.json();
+      })
       .then(data => setProjects(data))
-      .catch(console.error);
+      .catch(err => console.error('Error fetching projects:', err));
   };
 
   const openModal = (project: any = null) => {
@@ -136,6 +149,7 @@ export default function Projects() {
           <style>
             body { font-family: 'Cairo', Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1a3622; padding-bottom: 10px; }
+            .logo { width: 80px; height: 80px; margin-bottom: 10px; object-fit: contain; }
             .title { color: #1a3622; font-size: 24px; font-weight: bold; margin: 0; }
             .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
@@ -153,6 +167,8 @@ export default function Projects() {
         </head>
         <body>
           <div class="header">
+            <img src="${settings?.logoPath || SYRIAN_EAGLE_LOGO}" class="logo" alt="شعار البلدية" />
+            <p class="subtitle">${settings?.headerLine1 || 'الجمهورية العربية السورية'}<br/>${settings?.headerLine2 || 'محافظة دير الزور - ناحية البصيرة'}<br/>${settings?.headerLine3 || 'مجلس بلدية طيب الفال'}</p>
             <h1 class="title">تقرير المشاريع</h1>
             <p class="subtitle">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SY')}</p>
           </div>

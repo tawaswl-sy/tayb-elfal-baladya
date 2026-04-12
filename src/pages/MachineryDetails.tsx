@@ -18,6 +18,7 @@ export default function MachineryDetails() {
   const fetchSettings = async () => {
     try {
       const res = await fetch('/api/settings');
+      if (!res.ok) throw new Error('Failed to fetch settings');
       const data = await res.json();
       if (data) setSettings(data);
     } catch (error) {
@@ -28,6 +29,7 @@ export default function MachineryDetails() {
   const fetchMachineryDetails = async () => {
     try {
       const res = await fetch('/api/machinery');
+      if (!res.ok) throw new Error('Failed to fetch machinery');
       const data = await res.json();
       // Find by ID or plate number
       const machine = data.find((m: any) => m.id === id || m.plateNumber === id);

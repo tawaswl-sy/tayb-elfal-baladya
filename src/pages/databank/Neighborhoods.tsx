@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Home, Plus, Edit, Trash2, Search, MapPin, Download, Printer } from 'lucide-react';
 import { exportToExcel, printTable } from '../../utils/exportUtils';
+import LocationPicker from '../../components/databank/LocationPicker';
 
 export default function Neighborhoods() {
+  const navigate = useNavigate();
   const [neighborhoods, setNeighborhoods] = useState<any[]>([]);
   const [tribes, setTribes] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -24,12 +27,17 @@ export default function Neighborhoods() {
   }, []);
 
   const fetchData = async () => {
-    const [nRes, tRes] = await Promise.all([
-      fetch('/api/databank/neighborhoods'),
-      fetch('/api/databank/tribes')
-    ]);
-    setNeighborhoods(await nRes.json());
-    setTribes(await tRes.json());
+    try {
+      const [nRes, tRes] = await Promise.all([
+        fetch('/api/databank/neighborhoods'),
+        fetch('/api/databank/tribes')
+      ]);
+      if (!nRes.ok || !tRes.ok) throw new Error('Failed to fetch data');
+      setNeighborhoods(await nRes.json());
+      setTribes(await tRes.json());
+    } catch (error) {
+      console.error('Error fetching neighborhoods:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,7 +112,7 @@ export default function Neighborhoods() {
     <div className="p-8 animate-fade-in">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-[#1a3622] p-3 rounded-lg text-[#d4af37]">
+          <div className="bg-[#1a3622] p-3 rounded-xl text-[#d4af37]">
             <Home size={28} />
           </div>
           <div>
@@ -115,14 +123,14 @@ export default function Neighborhoods() {
         <div className="flex gap-3">
           <button
             onClick={handlePrint}
-            className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors"
+            className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-colors"
           >
             <Printer size={20} />
             طباعة
           </button>
           <button
             onClick={handleExportExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors"
+            className="bg-green-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-700 transition-colors"
           >
             <Download size={20} />
             تصدير Excel
@@ -132,7 +140,7 @@ export default function Neighborhoods() {
               resetForm();
               setIsModalOpen(true);
             }}
-            className="bg-[#d4af37] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-600 transition-colors"
+            className="bg-[#d4af37] text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-yellow-600 transition-colors"
           >
             <Plus size={20} />
             إضافة حي
@@ -140,14 +148,14 @@ export default function Neighborhoods() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
         <div className="relative max-w-md mb-6">
           <input
             type="text"
             placeholder="بحث عن حي..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
         </div>
@@ -174,6 +182,15 @@ export default function Neighborhoods() {
                   <td className="p-4 text-gray-600">{n.ethnic}</td>
                   <td className="p-4">
                     <div className="flex gap-2">
+                      {n.latitude && n.longitude && (
+                        <button
+                          onClick={() => navigate(`/databank/map?lat=${n.latitude}&lng=${n.longitude}`)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="الذهاب إلى الموقع"
+                        >
+                          <MapPin size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setEditingId(n.id);
@@ -203,8 +220,8 @@ export default function Neighborhoods() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             <h2 className="text-2xl font-bold text-[#1a3622] mb-6">
               {editingId ? 'تعديل حي' : 'إضافة حي جديد'}
             </h2>
@@ -217,7 +234,7 @@ export default function Neighborhoods() {
                     required
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -228,7 +245,7 @@ export default function Neighborhoods() {
                     min="0"
                     value={formData.population}
                     onChange={e => setFormData({ ...formData, population: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -239,7 +256,7 @@ export default function Neighborhoods() {
                     min="0"
                     value={formData.families_count}
                     onChange={e => setFormData({ ...formData, families_count: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -248,7 +265,7 @@ export default function Neighborhoods() {
                     required
                     value={formData.tribe_id}
                     onChange={e => setFormData({ ...formData, tribe_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   >
                     <option value="">اختر العشيرة...</option>
                     {tribes.map(t => (
@@ -261,7 +278,7 @@ export default function Neighborhoods() {
                   <select
                     value={formData.ethnic}
                     onChange={e => setFormData({ ...formData, ethnic: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   >
                     <option value="عربي">عربي</option>
                     <option value="كردي">كردي</option>
@@ -271,26 +288,33 @@ export default function Neighborhoods() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">خط العرض (Latitude)</label>
-                  <input
-                    type="text"
-                    value={formData.latitude}
-                    onChange={e => setFormData({ ...formData, latitude: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
-                    dir="ltr"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">خط الطول (Longitude)</label>
-                  <input
-                    type="text"
-                    value={formData.longitude}
-                    onChange={e => setFormData({ ...formData, longitude: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
-                    dir="ltr"
-                  />
+              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                <LocationPicker 
+                  lat={formData.latitude} 
+                  lng={formData.longitude} 
+                  onChange={(lat, lng) => setFormData({ ...formData, latitude: lat, longitude: lng })}
+                />
+                <div className="grid grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">خط العرض</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={formData.latitude}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-500"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">خط الطول</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={formData.longitude}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-500"
+                      dir="ltr"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -299,7 +323,7 @@ export default function Neighborhoods() {
                 <textarea
                   value={formData.notes}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1a3622] focus:border-transparent"
                   rows={3}
                 />
               </div>
@@ -307,14 +331,14 @@ export default function Neighborhoods() {
               <div className="flex gap-4 mt-8">
                 <button
                   type="submit"
-                  className="flex-1 bg-[#1a3622] text-white px-4 py-2 rounded-lg hover:bg-[#2a4a32] transition-colors"
+                  className="flex-1 bg-[#1a3622] text-white px-4 py-2 rounded-xl hover:bg-[#2a4a32] transition-colors font-bold shadow-lg"
                 >
                   حفظ
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors font-bold"
                 >
                   إلغاء
                 </button>
